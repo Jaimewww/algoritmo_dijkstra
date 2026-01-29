@@ -10,9 +10,6 @@ public class GraphReader {
 
     /**
      * Carga un grafo desde un archivo de texto.
-     * @param archivo Ruta del archivo en formato String.
-     * @return Objeto Graph poblado.
-     * @throws IOException Si hay error de lectura.
      */
     public static Graph cargar(String archivo) throws IOException {
         List<String> lineas = Files.readAllLines(Path.of(archivo));
@@ -30,15 +27,13 @@ public class GraphReader {
             throw new IllegalArgumentException("La primera línea debe contener el número de nodos.");
         }
 
-        // true = Dirigido (Importante para Dijkstra, ya que A->B no implica B->A con el mismo costo)
+        // true = Dirigido
         Graph grafo = new Graph(numNodos, true);
 
-        // 3. Leer las aristas (Desde la segunda línea en adelante)
+        // Leer las aristas (Desde la segunda línea en adelante)
         for (int i = 1; i < lineas.size(); i++) {
             String linea = lineas.get(i).trim();
             String[] partes = linea.split("\\s+");
-
-            // Validar que la línea tenga 3 partes: origen, destino, peso
             if (partes.length < 3) {
                 System.err.println("Advertencia: Línea " + (i + 1) + " ignorada (formato incorrecto): " + linea);
                 continue;
