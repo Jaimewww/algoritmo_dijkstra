@@ -1,6 +1,6 @@
-
 import io.FileSelector;
 import io.GraphReader;
+import structures.Edge;
 import structures.Graph;
 import util.DijkstraAlgorithm;
 
@@ -19,19 +19,17 @@ public class Main {
 
     private static final Scanner scanner = new Scanner(System.in);
 
-    // Colores para la consola
+    // --- COLORES ---
     public static class ANSI {
         public static final String RESET = "\u001B[0m";
-        public static final String GREEN = "\u001B[32m";
         public static final String GREEN_BOLD = "\u001B[1;32m";
-        public static final String YELLOW = "\u001B[33m";
         public static final String YELLOW_BOLD = "\u001B[1;33m";
         public static final String BLUE = "\u001B[34m";
         public static final String BLUE_BOLD = "\u001B[1;34m";
         public static final String CYAN = "\u001B[36m";
-        public static final String MAGENTA_BOLD = "\u001B[1;35m";
         public static final String RED_BOLD = "\u001B[1;31m";
         public static final String WHITE_BOLD = "\u001B[1;37m";
+        public static final String MAGENTA_BOLD = "\u001B[1;35m";
     }
 
     public static void main(String[] args) {
@@ -41,7 +39,6 @@ public class Main {
         while (running) {
             printMenu();
             int option = getIntInput(ANSI.YELLOW_BOLD + ">> Seleccione una opción: " + ANSI.RESET);
-
             System.out.println();
 
             switch (option) {
@@ -49,18 +46,12 @@ public class Main {
                     cargarGrafoInteractivo(rutaDatasets);
                     break;
                 case 2:
-                    ejecutarDijkstraInteractivo();
+                    ejecutarDijkstraConTabla();
                     break;
                 case 3:
-                    buscarCaminoMinimo();
+                    mostrarTablaGeneralConexiones();
                     break;
                 case 4:
-                    mostrarTodasLasDistancias();
-                    break;
-                case 5:
-                    mostrarInformacionGrafo();
-                    break;
-                case 6:
                     System.out.println(ANSI.BLUE_BOLD + "Saliendo del sistema..." + ANSI.RESET);
                     running = false;
                     break;
@@ -71,32 +62,23 @@ public class Main {
         scanner.close();
     }
 
-    // --- MÉTODOS VISUALES ---
+    // --- MENÚ PRINCIPAL ---
     private static void printMenu() {
         System.out.println("\n" + ANSI.BLUE_BOLD + "============================================================" + ANSI.RESET);
         System.out.println(ANSI.BLUE_BOLD + "          TALLER 10: ALGORITMO DE DIJKSTRA" + ANSI.RESET);
         System.out.println(ANSI.BLUE_BOLD + "============================================================" + ANSI.RESET);
 
         if (currentGraph != null) {
-            System.out.println(" " + ANSI.GREEN_BOLD + "ESTADO: Grafo cargado." + ANSI.RESET);
-            System.out.println("    " + ANSI.GREEN + "Nodos: " + currentGraph.getNodes() + ANSI.RESET);
+            System.out.println(" " + ANSI.GREEN_BOLD + "ESTADO: Grafo cargado (" + currentGraph.getNodes() + " nodos)." + ANSI.RESET);
         } else {
             System.out.println(" " + ANSI.YELLOW_BOLD + "ESTADO: Sin grafo." + ANSI.RESET);
         }
 
-        if (isDijkstraExecuted) {
-            System.out.println(" " + ANSI.CYAN + "DIJKSTRA: Ejecutado (Origen: " + sourceNode + ")" + ANSI.RESET);
-        } else {
-            System.out.println(" " + ANSI.YELLOW + "DIJKSTRA: Pendiente." + ANSI.RESET);
-        }
-
         System.out.println(ANSI.BLUE_BOLD + "------------------------------------------------------------" + ANSI.RESET);
         System.out.println(ANSI.WHITE_BOLD + " 1. " + ANSI.RESET + "CARGAR GRAFO");
-        System.out.println(ANSI.WHITE_BOLD + " 2. " + ANSI.RESET + "EJECUTAR DIJKSTRA");
-        System.out.println(ANSI.WHITE_BOLD + " 3. " + ANSI.RESET + "CONSULTAR CAMINO");
-        System.out.println(ANSI.WHITE_BOLD + " 4. " + ANSI.RESET + "VER DISTANCIAS");
-        System.out.println(ANSI.WHITE_BOLD + " 5. " + ANSI.RESET + "VER INFO GRAFO");
-        System.out.println(ANSI.WHITE_BOLD + " 6. " + ANSI.RESET + "SALIR");
+        System.out.println(ANSI.WHITE_BOLD + " 2. " + ANSI.RESET + "CALCULAR RUTA");
+        System.out.println(ANSI.WHITE_BOLD + " 3. " + ANSI.RESET + "VER TABLA GENERAL");
+        System.out.println(ANSI.WHITE_BOLD + " 4. " + ANSI.RESET + "SALIR");
         System.out.println(ANSI.BLUE_BOLD + "============================================================" + ANSI.RESET);
     }
 
@@ -105,18 +87,14 @@ public class Main {
     private static void cargarGrafoInteractivo(Path carpeta) {
         try {
             System.out.println(ANSI.BLUE + "--- CARGAR NUEVO DATASET ---" + ANSI.RESET);
-
             FileSelector selector = new FileSelector();
             Path archivoSeleccionado = selector.escogerArchivoDeCarpeta(carpeta);
-
-            System.out.println("Leyendo archivo: " + ANSI.YELLOW + archivoSeleccionado.getFileName() + ANSI.RESET + "...");
+            System.out.println("Leyendo archivo: " + ANSI.YELLOW_BOLD + archivoSeleccionado.getFileName() + ANSI.RESET + "...");
 
             currentGraph = GraphReader.cargar(archivoSeleccionado.toString());
-
             isDijkstraExecuted = false;
             sourceNode = -1;
             dijkstraSolver = new DijkstraAlgorithm();
-
             System.out.println(ANSI.GREEN_BOLD + "¡Grafo cargado correctamente!" + ANSI.RESET);
 
         } catch (IOException e) {
@@ -126,52 +104,128 @@ public class Main {
         }
     }
 
-    private static void ejecutarDijkstraInteractivo() {
+    private static void ejecutarDijkstraConTabla() {
         if (currentGraph == null) {
             System.out.println(ANSI.MAGENTA_BOLD + "Error: Cargue un grafo primero." + ANSI.RESET);
             return;
         }
 
-        System.out.println(ANSI.BLUE + "--- CONFIGURACIÓN DE DIJKSTRA ---" + ANSI.RESET);
+        System.out.println(ANSI.BLUE + "--- CONFIGURAR RUTA ---" + ANSI.RESET);
         int maxNode = currentGraph.getNodes() - 1;
 
         int inputSource = getIntInput(">> Ingrese Nodo Origen (0-" + maxNode + "): ");
-
         if (inputSource < 0 || inputSource > maxNode) {
-            System.out.println(ANSI.RED_BOLD + "Error: Nodo fuera de rango." + ANSI.RESET);
+            System.out.println(ANSI.RED_BOLD + "Error: Nodo origen inválido." + ANSI.RESET);
             return;
         }
 
-        long startTime = System.nanoTime();
-        dijkstraSolver.execute(currentGraph.getAdjacencyList(), inputSource);
-        long endTime = System.nanoTime();
+        int inputDest = getIntInput(">> Ingrese Nodo Destino (0-" + maxNode + "): ");
+        if (inputDest < 0 || inputDest > maxNode) {
+            System.out.println(ANSI.RED_BOLD + "Error: Nodo destino inválido." + ANSI.RESET);
+            return;
+        }
 
-        System.out.println(ANSI.GREEN_BOLD + "Calculado en " + (endTime - startTime) / 1000 + " µs." + ANSI.RESET);
+        System.out.print("Procesando... ");
+        dijkstraSolver.execute(currentGraph.getAdjacencyList(), inputSource);
 
         sourceNode = inputSource;
         isDijkstraExecuted = true;
+        System.out.println(ANSI.GREEN_BOLD + "Completado." + ANSI.RESET);
+        mostrarTablaDeResultadosCalculados();
+        mostrarCamino(inputDest);
+
+        System.out.println(ANSI.CYAN + "\nRegresando al menú principal..." + ANSI.RESET);
     }
 
-    private static void buscarCaminoMinimo() {
-        if (!validarEjecucionPrevia()) return;
-
-        System.out.println(ANSI.BLUE + "--- CONSULTA DE RUTA ---" + ANSI.RESET);
-        int target = getIntInput(">> Ingrese Nodo Destino: ");
-
-        if (target < 0 || target >= currentGraph.getNodes()) {
-            System.out.println(ANSI.RED_BOLD + "Error: Nodo destino no existe." + ANSI.RESET);
+       private static void calcularRutaPuntoAPunto() {
+        if (currentGraph == null) {
+            System.out.println(ANSI.MAGENTA_BOLD + "Error: Primero cargue un grafo." + ANSI.RESET);
             return;
         }
 
-        int[] distancias = dijkstraSolver.getDistances();
-        int distanciaTotal = distancias[target];
+        System.out.println(ANSI.BLUE + "--- CÁLCULO RÁPIDO ---" + ANSI.RESET);
+        int maxNode = currentGraph.getNodes() - 1;
 
-        if (distanciaTotal == Integer.MAX_VALUE) {
-            System.out.println(ANSI.RED_BOLD + "No hay camino de " + sourceNode + " a " + target + "." + ANSI.RESET);
+        int origen = getIntInput(">> Origen: ");
+        if (origen < 0 || origen > maxNode) { System.out.println(ANSI.RED_BOLD + "Inválido." + ANSI.RESET); return; }
+
+        int destino = getIntInput(">> Destino: ");
+        if (destino < 0 || destino > maxNode) { System.out.println(ANSI.RED_BOLD + "Inválido." + ANSI.RESET); return; }
+
+        dijkstraSolver.execute(currentGraph.getAdjacencyList(), origen);
+        sourceNode = origen;
+        isDijkstraExecuted = true;
+
+        mostrarCamino(destino);
+    }
+
+    private static void mostrarTablaGeneralConexiones() {
+        if (currentGraph == null) {
+            System.out.println(ANSI.MAGENTA_BOLD + "Error: No hay grafo cargado." + ANSI.RESET);
+            return;
+        }
+
+        System.out.println("\n" + ANSI.CYAN + "--- TABLA GENERAL DEL GRAFO (Topología) ---" + ANSI.RESET);
+        System.out.printf("%-10s %-40s%n", "Nodo", "Conexiones [Destino : Peso]");
+        System.out.println("-------------------------------------------------------");
+
+        List<List<Edge>> lista = currentGraph.getAdjacencyList();
+
+        for (int i = 0; i < lista.size(); i++) {
+            List<Edge> adj = lista.get(i);
+            StringBuilder sb = new StringBuilder();
+
+            if (adj.isEmpty()) {
+                sb.append(ANSI.RED_BOLD).append("Sin conexiones salientes").append(ANSI.RESET);
+            } else {
+                for (Edge e : adj) {
+                    sb.append("[")
+                            .append(ANSI.YELLOW_BOLD).append(e.getDestination()).append(ANSI.RESET)
+                            .append(" : ")
+                            .append(ANSI.GREEN_BOLD).append(e.getWeight()).append(ANSI.RESET)
+                            .append("]  ");
+                }
+            }
+            System.out.printf("Nodo %-5d %-40s%n", i, sb.toString());
+        }
+        System.out.println("-------------------------------------------------------");
+    }
+
+    // --- MÉTODOS AUXILIARES ---
+
+    private static void mostrarTablaDeResultadosCalculados() {
+        System.out.println("\n" + ANSI.CYAN + "RESULTADOS CALCULADOS DESDE NODO " + sourceNode + ":" + ANSI.RESET);
+        System.out.printf("%-10s %-15s %-15s%n", "Destino", "Costo Acumulado", "Estado");
+        System.out.println("-------------------------------------------");
+
+        int[] distancias = dijkstraSolver.getDistances();
+        for (int i = 0; i < distancias.length; i++) {
+            String costoStr = (distancias[i] == Integer.MAX_VALUE) ? "INF" : String.valueOf(distancias[i]);
+            String estado = (distancias[i] == Integer.MAX_VALUE) ? ANSI.RED_BOLD + "Inalcanzable" + ANSI.RESET : "Accesible";
+            if (i == sourceNode) estado = ANSI.CYAN + "Origen" + ANSI.RESET;
+
+            System.out.printf("Nodo %-5d %-15s %-15s%n", i, costoStr, estado);
+        }
+        System.out.println("-------------------------------------------");
+    }
+
+    private static void mostrarCamino(int target) {
+        int[] distancias = dijkstraSolver.getDistances();
+
+        if (target >= distancias.length || target < 0) {
+            System.out.println(ANSI.RED_BOLD + "Nodo inválido." + ANSI.RESET);
+            return;
+        }
+
+        int costo = distancias[target];
+
+        System.out.println("\n" + ANSI.BLUE + "--- RUTA SELECCIONADA ---" + ANSI.RESET);
+        if (costo == Integer.MAX_VALUE) {
+            System.out.println(ANSI.RED_BOLD + "No hay camino posible de " + sourceNode + " a " + target + "." + ANSI.RESET);
         } else {
             List<Integer> path = dijkstraSolver.getShortestPath(target, dijkstraSolver.getPredecessors());
 
-            System.out.println("Costo: " + ANSI.GREEN_BOLD + distanciaTotal + ANSI.RESET);
+            System.out.println("Costo Total: " + ANSI.GREEN_BOLD + costo + ANSI.RESET);
             System.out.print("Ruta: ");
             for (int i = 0; i < path.size(); i++) {
                 System.out.print(ANSI.YELLOW_BOLD + path.get(i) + ANSI.RESET);
@@ -179,50 +233,6 @@ public class Main {
             }
             System.out.println();
         }
-    }
-
-    private static void mostrarTodasLasDistancias() {
-        if (!validarEjecucionPrevia()) return;
-
-        System.out.println(ANSI.BLUE + "--- DISTANCIAS DESDE NODO " + sourceNode + " ---" + ANSI.RESET);
-        System.out.printf("%-10s %-10s %-15s%n", "Destino", "Costo", "Estado");
-        System.out.println("-------------------------------------");
-
-        int[] distancias = dijkstraSolver.getDistances();
-        for (int i = 0; i < distancias.length; i++) {
-            String costoStr = (distancias[i] == Integer.MAX_VALUE) ? "INF" : String.valueOf(distancias[i]);
-            String estado = (distancias[i] == Integer.MAX_VALUE) ? ANSI.RED_BOLD + "Inalcanzable" + ANSI.RESET : ANSI.GREEN + "Accesible" + ANSI.RESET;
-            if (i == sourceNode) estado = ANSI.CYAN + "Origen" + ANSI.RESET;
-
-            System.out.printf("Nodo %-5d %-10s %-15s%n", i, costoStr, estado);
-        }
-    }
-
-    private static void mostrarInformacionGrafo() {
-        if (currentGraph == null) {
-            System.out.println(ANSI.MAGENTA_BOLD + "No hay grafo cargado." + ANSI.RESET);
-            return;
-        }
-        System.out.println(ANSI.BLUE_BOLD + "--- INFO DEL GRAFO ---" + ANSI.RESET);
-        System.out.println("Nodos: " + currentGraph.getNodes());
-        System.out.println("Tipo: " + (currentGraph.isDirected() ? "Dirigido" : "No Dirigido"));
-
-        var adj = currentGraph.getAdjacencyList();
-        int edgesCount = 0;
-        for (var list : adj) edgesCount += list.size();
-        System.out.println("Aristas: " + edgesCount);
-    }
-
-    private static boolean validarEjecucionPrevia() {
-        if (currentGraph == null) {
-            System.out.println(ANSI.MAGENTA_BOLD + "Error: Primero cargue un grafo." + ANSI.RESET);
-            return false;
-        }
-        if (!isDijkstraExecuted) {
-            System.out.println(ANSI.MAGENTA_BOLD + "Error: Ejecute Dijkstra primero." + ANSI.RESET);
-            return false;
-        }
-        return true;
     }
 
     private static int getIntInput(String prompt) {
